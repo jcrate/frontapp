@@ -7,6 +7,7 @@ require_relative 'client/comments.rb'
 require_relative 'client/contact_groups.rb'
 require_relative 'client/contacts.rb'
 require_relative 'client/conversations.rb'
+require_relative 'client/drafts.rb'
 require_relative 'client/events.rb'
 require_relative 'client/inboxes.rb'
 require_relative 'client/messages.rb'
@@ -29,6 +30,7 @@ module Frontapp
     include Frontapp::Client::ContactGroups
     include Frontapp::Client::Contacts
     include Frontapp::Client::Conversations
+    include Frontapp::Client::Drafts
     include Frontapp::Client::Events
     include Frontapp::Client::Inboxes
     include Frontapp::Client::Messages
@@ -61,7 +63,13 @@ module Frontapp
           raise Error.from_response(res)
         end
         response = JSON.parse(res.to_s)
-        items.concat(response["_results"]) if response["_results"]
+
+        if block_given?
+          yield(response["_results"])
+        else
+          items.concat(response["_results"]) if response["_results"]
+        end
+
         pagination = response["_pagination"]
         if pagination.nil? || pagination["next"].nil?
           last_page = true
@@ -136,15 +144,15 @@ module Frontapp
         res << q.map do |k, v|
           case v
           when Symbol, String
-            "q[#{k}]=#{URI.encode_www_form_component(v)}"
+            "q[#{k}]=#{URI.encode_uri_component(v)}"
           when Array then
-            v.map { |c| "q[#{k}][]=#{URI.encode_www_form_component(c.to_s)}" }.join("&")
+            v.map { |c| "q[#{k}][]=#{URI.encode_uri_component(c.to_s)}" }.join("&")
           else
-            "q[#{k}]=#{URI.encode_www_form_component(v.to_s)}"
+            "q[#{k}]=#{URI.encode_uri_component(v.to_s)}"
           end
         end
       end
-      res << params.map {|k,v| "#{k}=#{URI.encode_www_form_component(v.to_s)}"}
+      res << params.map {|k,v| "#{k}=#{URI.encode_uri_component(v.to_s)}"}
       res.join("&")
     end
 
